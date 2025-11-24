@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #87CEEB; /* Sky blue */
+  font-family: 'Inter', sans-serif;
+}
+
+canvas {
+  display: block;
+}
+
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  text-shadow: 1px 1px 0 #000;
+  pointer-events: none;
+}
