@@ -43,11 +43,9 @@ class Animal {
         }
 
         // 1. Calculate Radial Up (Current Surface Normal)
-        const radialUp = this.group.position.clone().normalize();
+        let radialUp = this.group.position.clone().normalize();
 
-        // 2. Enforce targetDir is ALWAYS tangent to the sphere
-        // This prevents the sheep from pitching up/down (looking into ground or sky)
-        // v_tangent = v - (v . n) * n
+        // 2. Enforce targetDir is ALWAYS tangent to the sphere (Old Position)
         this.targetDir.sub(radialUp.clone().multiplyScalar(this.targetDir.dot(radialUp))).normalize();
 
         // If targetDir becomes zero (rare), pick a new random tangent
@@ -67,16 +65,28 @@ class Animal {
         // Physics: Snap to Sphere Surface + Hover
         // Simple Radial Projection
         const r = this.game.world.radius;
-        const hoverHeight = 1.0; // Hover slightly to avoid clipping
+        const hoverHeight = 0.5; // Hover slightly to avoid clipping
         this.group.position.normalize().multiplyScalar(r + hoverHeight);
 
-        // 4. Orientation
-        // Align Up vector to Radial Up
-        this.group.up.copy(radialUp);
+        // 4. Orientation (Explicit Quaternion Construction)
+        // Recalculate Radial Up AFTER movement
+        const newRadialUp = this.group.position.clone().normalize();
 
-        // Look in direction of movement (tangent)
-        const lookTarget = this.group.position.clone().add(this.targetDir);
-        this.group.lookAt(lookTarget);
+        // Re-project targetDir to be strictly tangent to the NEW surface normal
+        this.targetDir.sub(newRadialUp.clone().multiplyScalar(this.targetDir.dot(newRadialUp))).normalize();
+
+        // Construct rotation basis
+        // Y axis = Radial Up (Perpendicular to ground)
+        // Z axis = Forward Direction (Tangent to ground)
+        // X axis = Right Direction (Cross product)
+
+        const yAxis = newRadialUp;
+        const zAxis = this.targetDir.clone();
+        const xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+
+        const rotationMatrix = new THREE.Matrix4();
+        rotationMatrix.makeBasis(xAxis, yAxis, zAxis);
+        this.group.quaternion.setFromRotationMatrix(rotationMatrix);
     }
 
     pickNewState() {
@@ -96,7 +106,7 @@ class Animal {
         } else {
             this.state = 'WANDER';
             this.stateTimer = Math.random() * 3 + 1;
-            this.moveSpeed = 2;
+            this.moveSpeed = 1;
 
             // Pick random tangent direction
             const radialUp = this.group.position.clone().normalize();
@@ -112,7 +122,7 @@ class Animal {
         } else {
             this.state = 'FLEE';
             this.stateTimer = 5;
-            this.moveSpeed = 6;
+            this.moveSpeed = 3;
 
             // Run away from player
             // We need player position. Passed in game?
