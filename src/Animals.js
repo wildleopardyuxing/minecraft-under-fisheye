@@ -5,7 +5,8 @@ class Animal {
         this.game = game;
         this.group = new THREE.Group();
         this.group.position.set(x, y, z);
-        this.game.scene.add(this.group);
+        // Fix: Add to world group so it rotates with the world!
+        this.game.world.group.add(this.group);
 
         this.velocity = new THREE.Vector3();
         this.isDead = false;
@@ -15,7 +16,15 @@ class Animal {
         this.state = 'IDLE'; // IDLE, WANDER, FLEE
         this.stateTimer = Math.random() * 3 + 2;
         this.moveSpeed = 0;
-        this.targetDir = new THREE.Vector3(1, 0, 0);
+
+        // Initialize targetDir to be tangent to the surface
+        const radialUp = this.group.position.clone().normalize();
+        // Pick a random vector and cross with radialUp to get a tangent
+        let randomVec = new THREE.Vector3(Math.random(), Math.random(), Math.random());
+        if (randomVec.clone().cross(radialUp).lengthSq() < 0.01) {
+            randomVec = new THREE.Vector3(1, 0, 0); // Fallback if parallel
+        }
+        this.targetDir = new THREE.Vector3().crossVectors(radialUp, randomVec).normalize();
 
         this.createModel();
     }
@@ -33,31 +42,26 @@ class Animal {
             this.pickNewState();
         }
 
+        // 1. Calculate Radial Up (Current Surface Normal)
+        const radialUp = this.group.position.clone().normalize();
+
+        // 2. Enforce targetDir is ALWAYS tangent to the sphere
+        // This prevents the sheep from pitching up/down (looking into ground or sky)
+        // v_tangent = v - (v . n) * n
+        this.targetDir.sub(radialUp.clone().multiplyScalar(this.targetDir.dot(radialUp))).normalize();
+
+        // If targetDir becomes zero (rare), pick a new random tangent
+        if (this.targetDir.lengthSq() < 0.01) {
+            let randomVec = new THREE.Vector3(Math.random(), Math.random(), Math.random());
+            this.targetDir.crossVectors(radialUp, randomVec).normalize();
+        }
+
         // Movement
         if (this.state === 'WANDER' || this.state === 'FLEE') {
             const moveDist = this.moveSpeed * deltaTime;
 
-            // Move along sphere surface (approximate)
-            // We move in `targetDir` which is tangent to sphere
-
-            // 1. Calculate Radial Up
-            const radialUp = this.group.position.clone().normalize();
-
-            // 2. Ensure targetDir is tangent
-            // Project targetDir onto plane perpendicular to radialUp
-            // v_tangent = v - (v . n) * n
-            this.targetDir.sub(radialUp.clone().multiplyScalar(this.targetDir.dot(radialUp))).normalize();
-
             // 3. Move
             this.group.position.add(this.targetDir.clone().multiplyScalar(moveDist));
-
-            // 4. Orientation (Look at)
-            // Look in direction of movement
-            const lookTarget = this.group.position.clone().add(this.targetDir);
-            this.group.lookAt(lookTarget);
-
-            // 5. Align Up vector to Radial Up
-            this.group.up.copy(radialUp);
         }
 
         // Physics: Snap to Sphere Surface + Hover
@@ -66,11 +70,11 @@ class Animal {
         const hoverHeight = 1.0; // Hover slightly to avoid clipping
         this.group.position.normalize().multiplyScalar(r + hoverHeight);
 
-        // Re-align Up vector every frame to ensure it stays radial
-        const radialUp = this.group.position.clone().normalize();
+        // 4. Orientation
+        // Align Up vector to Radial Up
         this.group.up.copy(radialUp);
-        // We need to call lookAt again after changing 'up' to ensure consistent orientation?
-        // Actually, lookAt uses 'up'. If we change 'up', we might need to re-look.
+
+        // Look in direction of movement (tangent)
         const lookTarget = this.group.position.clone().add(this.targetDir);
         this.group.lookAt(lookTarget);
     }

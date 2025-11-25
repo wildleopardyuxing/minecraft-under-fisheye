@@ -78,7 +78,36 @@ export class Player {
         // Raycast from center of screen
         this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.game.camera);
 
-        // Intersect with all meshes in the world group
+        // 1. Check for Animal Hits
+        if (this.game.animals && this.game.animals.animals.length > 0) {
+            const animalGroups = this.game.animals.animals.map(a => a.group);
+            const animalIntersects = this.raycaster.intersectObjects(animalGroups, true);
+
+            if (animalIntersects.length > 0) {
+                // We hit an animal (closest one)
+                const hitObj = animalIntersects[0].object;
+
+                // Find the animal instance that owns this mesh
+                const animal = this.game.animals.animals.find(a => {
+                    let parent = hitObj;
+                    while (parent) {
+                        if (parent === a.group) return true;
+                        parent = parent.parent;
+                    }
+                    return false;
+                });
+
+                if (animal) {
+                    // Attack!
+                    this.game.hand.swing();
+                    animal.hit();
+                    console.log("Hit animal!");
+                    return; // Stop here, don't place/mine blocks
+                }
+            }
+        }
+
+        // 2. Intersect with all meshes in the world group (Blocks)
         const intersects = this.raycaster.intersectObjects(this.game.world.group.children);
 
         if (intersects.length > 0) {
