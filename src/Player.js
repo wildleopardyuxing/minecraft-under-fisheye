@@ -17,8 +17,40 @@ export class Player {
 
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
+        this.yaw = 0;
+        this.pitch = 0;
+        this.isLocked = false;
+
+        document.addEventListener('pointerlockchange', () => {
+            this.isLocked = document.pointerLockElement === document.body;
+        });
+
+        document.addEventListener('mousemove', (e) => this.onMouseMove(e));
         window.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        window.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent context menu on right click
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    onMouseMove(event) {
+        if (!this.isLocked) return;
+
+        const sensitivity = 0.002;
+        this.yaw -= event.movementX * sensitivity;
+        this.pitch -= event.movementY * sensitivity;
+
+        // Clamp pitch
+        this.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch));
+
+        // Update Camera Rotation
+        // Camera is at (0, R+h, 0).
+        // Yaw rotates around Y axis.
+        // Pitch rotates around local X axis.
+
+        const quaternion = new THREE.Quaternion();
+        const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+        const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
+
+        quaternion.multiplyQuaternions(qYaw, qPitch);
+        this.game.camera.quaternion.copy(quaternion);
     }
 
     onKeyDown(event) {
@@ -38,12 +70,13 @@ export class Player {
     onMouseDown(event) {
         if (!this.game.world) return;
 
-        // Calculate mouse position in normalized device coordinates
-        const mouse = new THREE.Vector2();
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        if (!this.isLocked) {
+            document.body.requestPointerLock();
+            return;
+        }
 
-        this.raycaster.setFromCamera(mouse, this.game.camera);
+        // Raycast from center of screen
+        this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.game.camera);
 
         // Intersect with all meshes in the world group
         const intersects = this.raycaster.intersectObjects(this.game.world.group.children);
@@ -66,16 +99,6 @@ export class Player {
                     const localPoint = hit.point.clone().applyMatrix4(this.game.world.group.matrixWorld.clone().invert());
 
                     // Add normal (assuming axis aligned blocks and no scaling on group other than rotation)
-                    // Since group is rotated, we need to rotate the normal too?
-                    // Wait, hit.face.normal is in World Space? 
-                    // Three.js docs: "face.normal is the normal of the face in object space."
-                    // BUT, for InstancedMesh, it might be different.
-                    // Actually, usually face.normal is in object space.
-                    // If object is rotated, we need to transform it.
-                    // But here, the InstancedMesh is NOT rotated. The Group is.
-                    // So face.normal is in Group Local Space.
-                    // So we can just use it directly.
-
                     const pos = localPoint.add(normal.multiplyScalar(0.5)).round();
 
                     this.game.world.addBlock(pos.x, pos.y, pos.z, selectedType);
@@ -92,20 +115,44 @@ export class Player {
         const worldGroup = this.game.world.group;
         let isMoving = false;
 
+        // Calculate movement direction relative to camera Yaw
+        // Forward (W) -> Rotate World around Right Vector
+        // Right (D) -> Rotate World around Forward Vector (actually -Forward)
+
+        // Camera Right Vector (ignoring pitch for movement)
+        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+        // Camera Forward Vector (ignoring pitch)
+        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+
         if (this.keys.w) {
-            worldGroup.rotateX(moveSpeed);
+            // Move Forward: Rotate world around Right vector?
+            // If we move forward, the world rolls towards us.
+            // Axis of rotation is Perpendicular to Forward and Up. That is Right.
+            // Direction: Positive or Negative?
+            // If we look -Z, Right is +X.
+            // Rotating +X brings +Z up (towards -Z). Correct.
+            worldGroup.rotateOnWorldAxis(right, moveSpeed);
             isMoving = true;
         }
         if (this.keys.s) {
-            worldGroup.rotateX(-moveSpeed);
+            worldGroup.rotateOnWorldAxis(right, -moveSpeed);
             isMoving = true;
         }
         if (this.keys.a) {
-            worldGroup.rotateZ(-moveSpeed);
+            // Move Left: Rotate world around Forward vector?
+            // If we look -Z, Forward is -Z.
+            // Rotating around -Z (CCW): +X goes to +Y.
+            // We want ground to move Right (+X).
+            // So we need to rotate around Forward (-Z) in negative direction?
+            // Or rotate around Z axis.
+            // Let's visualize.
+            // Move Left -> Ground moves Right.
+            // Axis is Forward.
+            worldGroup.rotateOnWorldAxis(forward, moveSpeed); // Check sign
             isMoving = true;
         }
         if (this.keys.d) {
-            worldGroup.rotateZ(moveSpeed);
+            worldGroup.rotateOnWorldAxis(forward, -moveSpeed);
             isMoving = true;
         }
 

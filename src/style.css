@@ -1,7 +1,8 @@
 body {
   margin: 0;
   overflow: hidden;
-  background-color: #87CEEB; /* Sky blue */
+  background-color: #87CEEB;
+  /* Sky blue */
   font-family: 'Inter', sans-serif;
 }
 
@@ -16,4 +17,35 @@ canvas {
   color: white;
   text-shadow: 1px 1px 0 #000;
   pointer-events: none;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+#crosshair::before {
+  top: 9px;
+  left: 0;
+  width: 20px;
+  height: 2px;
+}
+
+#crosshair::after {
+  top: 0;
+  left: 9px;
+  width: 2px;
+  height: 20px;
 }
