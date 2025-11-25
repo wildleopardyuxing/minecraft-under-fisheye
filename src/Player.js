@@ -88,22 +88,36 @@ export class Player {
             // Swing hand
             this.game.hand.swing();
 
-            if (event.button === 0) { // Left click: Mine
-                if (hit.instanceId !== undefined) {
-                    this.game.world.removeBlock(hit.instanceId, type);
-                    this.game.inventory.add(type, 1);
-                }
-            } else if (event.button === 2) { // Right click: Place
-                const selectedType = this.game.inventory.selected;
-                if (this.game.inventory.items[selectedType] > 0) {
+            const selectedType = this.game.inventory.selected;
+            const count = this.game.inventory.items[selectedType] || 0;
+            const isBlock = count > 0 && selectedType !== 'pickaxe';
+
+            if (event.button === 0) { // Left click
+                if (isBlock) {
+                    // Place Block
                     const normal = hit.face.normal;
-
-                    // Transform hit point to local space of World Group
                     const localPoint = hit.point.clone().applyMatrix4(this.game.world.group.matrixWorld.clone().invert());
-
-                    // Add normal (assuming axis aligned blocks and no scaling on group other than rotation)
                     const pos = localPoint.add(normal.multiplyScalar(0.5)).round();
-
+                    this.game.world.addBlock(pos.x, pos.y, pos.z, selectedType);
+                    this.game.inventory.remove(selectedType, 1);
+                } else {
+                    // Mine Block (Empty hand or Pickaxe)
+                    if (hit.instanceId !== undefined) {
+                        this.game.world.removeBlock(hit.instanceId, type);
+                        this.game.inventory.add(type, 1);
+                    }
+                }
+            } else if (event.button === 2) { // Right click
+                // Keep as Place for backup or alternative?
+                // User didn't explicitly ask to remove Right Click, but implied Left Click should do it.
+                // I'll keep it as consistent Place for now, or maybe just do nothing if Left Click handles it?
+                // Let's keep it as Place to be safe, but maybe user wants it removed?
+                // "otherwise ... click mouse should be put item out"
+                // I'll leave it for now.
+                if (count > 0 && selectedType !== 'pickaxe') {
+                    const normal = hit.face.normal;
+                    const localPoint = hit.point.clone().applyMatrix4(this.game.world.group.matrixWorld.clone().invert());
+                    const pos = localPoint.add(normal.multiplyScalar(0.5)).round();
                     this.game.world.addBlock(pos.x, pos.y, pos.z, selectedType);
                     this.game.inventory.remove(selectedType, 1);
                 }

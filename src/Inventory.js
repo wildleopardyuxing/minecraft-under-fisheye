@@ -36,7 +36,7 @@ export class Inventory {
         hint.style.color = 'white';
         hint.style.textShadow = '1px 1px 0 #000';
         hint.style.fontSize = '12px';
-        hint.innerText = 'C: Craft Pickaxe (3 Wood + 2 Stone)';
+        hint.innerText = 'Left Click: Action (Mine/Place) | C: Craft Pickaxe';
         document.body.appendChild(hint);
     }
 
@@ -92,14 +92,32 @@ export class Inventory {
                             break;
                         case 'pickaxe':
                             icon.style.backgroundImage = 'none';
-                            icon.style.backgroundColor = 'cyan';
-                            // Add a simple pickaxe shape using CSS pseudo-elements? 
-                            // For now just color is fine to distinguish.
-                            icon.innerHTML = '⛏️'; // Emoji as placeholder
-                            icon.style.display = 'flex';
-                            icon.style.alignItems = 'center';
-                            icon.style.justifyContent = 'center';
-                            icon.style.fontSize = '20px';
+                            icon.style.backgroundColor = 'transparent';
+
+                            // Draw Voxel Pickaxe Icon on Canvas
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 32;
+                            canvas.height = 32;
+                            const ctx = canvas.getContext('2d');
+
+                            // Draw simple pixel art pickaxe
+                            ctx.fillStyle = '#8d6e63'; // Wood
+                            // Handle (diagonal)
+                            for (let i = 4; i < 28; i += 2) {
+                                ctx.fillRect(i, 32 - i - 2, 4, 4);
+                            }
+
+                            ctx.fillStyle = '#9e9e9e'; // Stone
+                            // Head (Arc)
+                            ctx.fillRect(20, 2, 4, 4);
+                            ctx.fillRect(16, 4, 4, 4);
+                            ctx.fillRect(24, 4, 4, 4);
+                            ctx.fillRect(12, 8, 4, 4);
+                            ctx.fillRect(28, 8, 4, 4);
+
+                            icon.style.backgroundImage = `url(${canvas.toDataURL()})`;
+                            icon.style.backgroundSize = 'contain';
+                            icon.style.backgroundRepeat = 'no-repeat';
                             break;
                     }
 
@@ -107,13 +125,25 @@ export class Inventory {
 
                     const countDiv = document.createElement('div');
                     countDiv.className = 'slot-count';
-                    countDiv.innerText = count;
+                    countDiv.innerText = count > 0 ? count : ''; // Don't show 0
                     slot.appendChild(countDiv);
                 }
             }
 
             this.ui.appendChild(slot);
         });
+
+        // Update Hand Tool based on count
+        if (this.game && this.game.hand) {
+            const count = this.items[this.selected] || 0;
+            if (this.selected === 'pickaxe' && count > 0) {
+                this.game.hand.setTool('pickaxe');
+            } else if (count > 0) {
+                this.game.hand.setTool(this.selected);
+            } else {
+                this.game.hand.setTool('hand'); // Empty hand
+            }
+        }
     }
 
     add(type, count = 1) {
@@ -150,15 +180,12 @@ export class Inventory {
 
     onKeyDown(e) {
         const key = parseInt(e.key);
-        if (key >= 1 && key <= 5) {
-            const types = Object.keys(this.items);
-            if (key <= types.length) {
-                this.selected = types[key - 1];
-                this.updateUI();
-                if (this.game && this.game.hand) {
-                    this.game.hand.setTool(this.selected);
-                }
-            }
+        // Slots: 1:grass, 2:dirt, 3:stone, 4:wood, 5:leaf, 6:pickaxe
+        const slots = ['grass', 'dirt', 'stone', 'wood', 'leaf', 'pickaxe'];
+
+        if (key >= 1 && key <= slots.length) {
+            this.selected = slots[key - 1];
+            this.updateUI();
         }
         if (e.key.toLowerCase() === 'c') {
             this.craft();
