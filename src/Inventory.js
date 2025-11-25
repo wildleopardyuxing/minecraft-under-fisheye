@@ -30,7 +30,7 @@ export class Inventory {
         // Crafting hint
         const hint = document.createElement('div');
         hint.style.position = 'absolute';
-        hint.style.bottom = '60px';
+        hint.style.bottom = '80px'; // Moved up to avoid overlap
         hint.style.left = '50%';
         hint.style.transform = 'translateX(-50%)';
         hint.style.color = 'white';
