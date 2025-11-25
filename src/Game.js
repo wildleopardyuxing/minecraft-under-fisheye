@@ -10,7 +10,7 @@ export class Game {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
 
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -40,14 +40,13 @@ export class Game {
         this.scene.add(dirLight);
 
         // Camera Positioning
-        // Player is effectively at the "top" of the world (0, radius, 0)
-        // Camera should be slightly above and behind? Or top down?
-        // "Fisheye" usually implies a wide FOV and close proximity.
-        // Let's put camera at (0, radius + 5, 5) looking at (0, radius, 0)
+        // Player is at the "top" of the world (0, radius, 0)
+        // To feel like walking on ground, place camera at eye level (radius + 1.8)
+        // And look forward (-Z)
 
         const radius = this.world.radius;
-        this.camera.position.set(0, radius + 8, 8);
-        this.camera.lookAt(0, radius, 0);
+        this.camera.position.set(0, radius + 1.8, 0);
+        this.camera.lookAt(0, radius, -10);
 
         // Handle resize
         window.addEventListener('resize', () => this.onWindowResize(), false);

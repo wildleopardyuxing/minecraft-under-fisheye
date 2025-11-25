@@ -4,6 +4,7 @@ export class Player {
     constructor(game) {
         this.game = game;
         this.speed = 10;
+        this.bobbingTime = 0;
 
         this.keys = {
             w: false,
@@ -89,18 +90,34 @@ export class Player {
 
         const moveSpeed = 1.0 * deltaTime;
         const worldGroup = this.game.world.group;
+        let isMoving = false;
 
         if (this.keys.w) {
             worldGroup.rotateX(moveSpeed);
+            isMoving = true;
         }
         if (this.keys.s) {
             worldGroup.rotateX(-moveSpeed);
+            isMoving = true;
         }
         if (this.keys.a) {
             worldGroup.rotateZ(-moveSpeed);
+            isMoving = true;
         }
         if (this.keys.d) {
             worldGroup.rotateZ(moveSpeed);
+            isMoving = true;
+        }
+
+        // View Bobbing
+        if (isMoving) {
+            this.bobbingTime += deltaTime * 10;
+            const bobOffset = Math.sin(this.bobbingTime) * 0.1;
+            this.game.camera.position.y = this.game.world.radius + 1.8 + bobOffset;
+        } else {
+            // Reset to rest height smoothly
+            this.bobbingTime = 0;
+            this.game.camera.position.y = THREE.MathUtils.lerp(this.game.camera.position.y, this.game.world.radius + 1.8, deltaTime * 5);
         }
     }
 }
