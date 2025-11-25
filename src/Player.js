@@ -85,6 +85,9 @@ export class Player {
             const hit = intersects[0];
             const type = hit.object.userData.type;
 
+            // Swing hand
+            this.game.hand.swing();
+
             if (event.button === 0) { // Left click: Mine
                 if (hit.instanceId !== undefined) {
                     this.game.world.removeBlock(hit.instanceId, type);

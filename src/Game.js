@@ -3,6 +3,7 @@ import { World } from './World.js';
 import { Player } from './Player.js';
 import { Animals } from './Animals.js';
 import { Inventory } from './Inventory.js';
+import { Hand } from './Hand.js';
 
 export class Game {
     constructor() {
@@ -11,6 +12,7 @@ export class Game {
         this.scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
 
         this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.scene.add(this.camera);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -18,7 +20,7 @@ export class Game {
         document.body.appendChild(this.renderer.domElement);
 
         // Setup Inventory
-        this.inventory = new Inventory();
+        this.inventory = new Inventory(this);
 
         // Setup World
         this.world = new World();
@@ -30,6 +32,16 @@ export class Game {
 
         // Setup Player
         this.player = new Player(this);
+
+        // Setup Hand
+        this.hand = new Hand(this);
+        // Hand is attached to camera in constructor, but camera needs to be in scene? 
+        // No, camera is just used for rendering. 
+        // But objects attached to camera are rendered if camera is used.
+        // We don't need to add camera to scene unless we want to see it from another camera.
+        // But we DO need to make sure the hand is rendered.
+        // Three.js renders children of camera if camera is the active camera.
+
 
         // Setup Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -72,6 +84,7 @@ export class Game {
         this.player.update(deltaTime);
         this.world.update(deltaTime);
         this.animals.update(deltaTime);
+        this.hand.update(deltaTime);
 
         this.renderer.render(this.scene, this.camera);
     }

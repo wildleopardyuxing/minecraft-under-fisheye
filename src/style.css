@@ -49,3 +49,51 @@ canvas {
   width: 2px;
   height: 20px;
 }
+
+#hotbar {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.slot {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #555;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.slot.selected {
+  border-color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.slot-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  background-size: 64px 64px;
+  /* 2x2 grid of 32px icons (source is 16x16 but scaled) */
+  /* Actually source is 32x32 total? No, source is 2x2 grid. */
+}
+
+.slot-count {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+}
